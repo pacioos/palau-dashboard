@@ -228,7 +228,6 @@ grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_
 idx_url = grib_url + ".idx"
 
 grib_file = "./data_files/wnd10m.cfs.daily.grb2"
-os.remove(f"{grib_file}.idx")
 
 idx_file = grib_file + ".idx"
 
