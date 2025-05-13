@@ -28,7 +28,7 @@ today_str = today_hst.strftime("%Y%m%d")
 yest_hst = today_hst - timedelta(days=1)
 yest_str = yest_hst.strftime("%Y%m%d")
 
-cycle = "6"
+cycle = "06"
 
 today = datetime.utcnow()
 if today.month == 1:
