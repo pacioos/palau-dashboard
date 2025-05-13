@@ -8,8 +8,33 @@ import os
 import calendar
 from netCDF4 import num2date
 
+import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 os.makedirs("./data", exist_ok=True)
 os.makedirs("./data_files", exist_ok=True)
+
+def download_file(url, local_path, retries=3):
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        backoff_factor=1,
+        status_forcelist=[502, 503, 504],
+        raise_on_status=False
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+
+    try:
+        with session.get(url, stream=True, timeout=60) as r:
+            r.raise_for_status()
+            with open(local_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        print(f"Downloaded: {url}")
+    except Exception as e:
+        raise RuntimeError(f"Download failed: {url}\n{e}")
 
 
 # Palau lat/lon
@@ -70,11 +95,8 @@ idx_url = grib_url + ".idx"
 grib_file = "./data_files/rf_current.grb2"
 idx_file = grib_file + ".idx"
 
-with open(grib_file, "wb") as f:
-    f.write(requests.get(grib_url).content)
-
-with open(idx_file, "wb") as f:
-    f.write(requests.get(idx_url).content)
+download_file(grib_url, grib_file)
+download_file(idx_url, idx_file)
 
 ds = xr.open_dataset(grib_file, engine="cfgrib")
 
@@ -159,11 +181,8 @@ grib_file = "./data_files/tmean.current.grb2"
 
 idx_file = grib_file + ".idx"
 
-with open(grib_file, "wb") as f:
-    f.write(requests.get(grib_url).content)
-
-with open(idx_file, "wb") as f:
-    f.write(requests.get(idx_url).content)
+download_file(grib_url, grib_file)
+download_file(idx_url, idx_file)
 
 ds = xr.open_dataset(grib_file, engine="cfgrib")
 
@@ -231,11 +250,8 @@ grib_file = "./data_files/wnd10m.cfs.daily.grb2"
 
 idx_file = grib_file + ".idx"
 
-with open(grib_file, "wb") as f:
-    f.write(requests.get(grib_url).content)
-
-with open(idx_file, "wb") as f:
-    f.write(requests.get(idx_url).content)
+download_file(grib_url, grib_file)
+download_file(idx_url, idx_file)
 
 ds = xr.open_dataset(grib_file, engine="cfgrib")
 palau = ds.sel(latitude=lat,longitude=lon,method='nearest')
