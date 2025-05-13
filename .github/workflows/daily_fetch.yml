@@ -5,6 +5,9 @@ on:
   #   - cron: '0 16 * * *' 
   workflow_dispatch: 
 
+permissions:
+  contents: write
+
 jobs:
   fetch-data:
     runs-on: ubuntu-latest
@@ -31,3 +34,14 @@ jobs:
           path: |
             data/*.json
 
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Commit and push JSON data
+        run: |
+          git pull origin main  # In case branch is behind
+          git add data/*.json
+          git commit -m "Daily update of Palau JSON data" || echo "No changes to commit"
+          git push origin main
