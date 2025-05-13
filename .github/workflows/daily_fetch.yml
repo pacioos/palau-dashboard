@@ -25,9 +25,9 @@ jobs:
         run: python scripts/palau_data.py
 
       - name: Upload JSON output
-      uses: actions/upload-artifact@v4
-      with:
-        name: palau-json-outputs
-        path: |
-          data/*.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: palau-json-outputs
+          path: |
+            data/*.json
 
