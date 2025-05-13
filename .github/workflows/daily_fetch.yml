@@ -1,0 +1,33 @@
+name: Daily Palau Data Fetch
+
+on:
+  # schedule:
+  #   - cron: '0 16 * * *' 
+  workflow_dispatch: 
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install numpy requests xarray pandas netCDF4 cfgrib
+
+      - name: Run data fetch script
+        run: python scripts/palau_data.py
+
+      - name: Upload JSON output
+      uses: actions/upload-artifact@v4
+      with:
+        name: palau-json-outputs
+        path: |
+          data/*.json
+
