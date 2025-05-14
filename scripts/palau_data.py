@@ -15,7 +15,7 @@ from urllib3.util.retry import Retry
 os.makedirs("./data", exist_ok=True)
 os.makedirs("./data_files", exist_ok=True)
 
-def download_file(url, local_path, retries=3):
+def download_file(url, local_path, retries=5):
     session = requests.Session()
     retry = Retry(
         total=retries,
