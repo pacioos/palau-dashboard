@@ -1,8 +1,8 @@
 name: Daily Palau Data Fetch
 
 on:
-  # schedule:
-  #   - cron: '0 16 * * *' 
+  schedule:
+    - cron: '0 22 * * *' 
   workflow_dispatch: 
 
 permissions:
