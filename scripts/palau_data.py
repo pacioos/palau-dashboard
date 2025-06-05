@@ -84,7 +84,7 @@ response = requests.get(url)
 with open(filename, 'wb') as f:
     f.write(response.content)
 
-ds = xr.open_dataset(filename, decode_times=False)
+ds = xr.open_dataset(filename, decode_times=False,engine="netcdf4")
 df.loc['Rain', 'LastMonth'] = ds['aprod'].sel(Y=lat, X=lon, T=t_value, method='nearest').values
 
 source_df.loc['Rain','LastMonth'] = 'https://iridl.ldeo.columbia.edu/maproom/Global/Precipitation/Anomaly.html'
