@@ -15,26 +15,30 @@ from urllib3.util.retry import Retry
 os.makedirs("./data", exist_ok=True)
 os.makedirs("./data_files", exist_ok=True)
 
-def download_file(url, local_path, retries=5):
+def download_file(url, local_path, retries=5, wait=5):
     session = requests.Session()
     retry = Retry(
-        total=retries,
-        backoff_factor=1,
-        status_forcelist=[502, 503, 504],
-        raise_on_status=False
+        total=0,  # we’ll handle retry ourselves
+        backoff_factor=0,
+        status_forcelist=[]
     )
     session.mount("https://", HTTPAdapter(max_retries=retry))
 
-    try:
-        with session.get(url, stream=True, timeout=60) as r:
-            r.raise_for_status()
-            with open(local_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-        print(f"Downloaded: {url}")
-    except Exception as e:
-        raise RuntimeError(f"Download failed: {url}\n{e}")
+    for attempt in range(1, retries + 1):
+        try:
+            with session.get(url, stream=True, timeout=60) as r:
+                r.raise_for_status()
+                with open(local_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            print(f"Downloaded: {url}")
+            return
+        except Exception as e:
+            print(f"[Attempt {attempt}/{retries}] Failed to download {url}:\n{e}")
+            if attempt == retries:
+                raise RuntimeError(f"Download failed after {retries} attempts: {url}")
+            time.sleep(wait)
 
 
 # Palau lat/lon
@@ -79,10 +83,7 @@ url = (
 )
 
 filename = "./data_files/rf_lastMonth.nc"
-response = requests.get(url)
-
-with open(filename, 'wb') as f:
-    f.write(response.content)
+download_file(url, filename)
 
 ds = xr.open_dataset(filename, decode_times=False,engine="netcdf4")
 df.loc['Rain', 'LastMonth'] = ds['aprod'].sel(Y=lat, X=lon, T=t_value, method='nearest').values
@@ -118,8 +119,7 @@ filename = "./data_files/rf.forecast.nc"
 
 response = requests.get(url)
 
-with open(filename, 'wb') as f:
-    f.write(response.content)
+download_file(url, filename)
 
 rf_forecast_dataset = xr.open_dataset(filename)
 rf_forecast_palau = rf_forecast_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
