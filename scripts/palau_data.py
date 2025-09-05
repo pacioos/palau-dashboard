@@ -121,7 +121,7 @@ for y, m in months_to_try:
 
 if not success:
     df.loc["Rain", "LastMonth"] = np.nan
-    df.loc["Rain", "LastMonthName"] = "Missing"
+    df.loc["Rain", "LastMonthName"] = np.nan
 
 
 grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/prate.01.{today_str}{cycle}.daily.grb2"
@@ -234,7 +234,7 @@ for y, m in months_to_try:
 if not success:
     # Optional: mark as missing so downstream logic is explicit
     df.loc["TMean", "LastMonth"] = np.nan
-    df.loc["Tmean", "LastMonthName"] = "Missing"
+    df.loc["Tmean", "LastMonthName"] = np.nan
 
 grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/tmp2m.01.{today_str}{cycle}.daily.grb2"
 idx_url = grib_url + ".idx"
