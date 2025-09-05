@@ -1,7 +1,7 @@
 import numpy as np
 import requests
 import xarray as xr
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 import pandas as pd
 import os
