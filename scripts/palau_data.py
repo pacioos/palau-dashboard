@@ -48,7 +48,7 @@ lon = 134.5825
 min_lat_ssh, max_lat_ssh = 7.0, 8.0
 min_lon_ssh, max_lon_ssh = 134.0, 135.0
 
-columns = ["LastMonth","Current", "Forecast", "Outlook"]
+columns = ["LastMonth","LastMonthName","Current", "Forecast", "Outlook"]
 df = pd.DataFrame(columns=columns)
 source_df = pd.DataFrame(columns=columns)
 
@@ -67,28 +67,61 @@ else:
     last_month = today.month - 1
     last_year = today.year
 
-last_month_str = f"{calendar.month_abbr[last_month]} {last_year}"  # e.g., "Apr 2025"
-
 months_since_1960 = (last_year - 1960) * 12 + (last_month - 1)
 t_value = months_since_1960 + 0.5 
 
-base_url = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.CAMS_OPI/.v0208/.anomaly_9120/.prcp"
-url = (
-    f"{base_url}/T/%28days%20since%201960-01-01%29streamgridunitconvert"
-    f"/T/differential_mul/T/%28months%20since%201960-01-01%29streamgridunitconvert"
-    f"//units/%28mm/month%29def//long_name/%28Precipitation%20Anomaly%29def"
-    f"/DATA/-500/-450/-400/-350/-300/-250/-200/-150/-100/-50/-25/25/50/100/150/200/250/300/350/400/450/500/VALUES/prcp_anomaly_max500_colors2"
-    f"/Y/%285N%29%2810N%29RANGEEDGES/X/%28130E%29%28140E%29RANGEEDGES"
-    f"/T/%28{last_month_str}%29%28{last_month_str}%29RANGEEDGES/data.nc"
-)
+filename = "../data/rf_lastMonth.nc"
 
-filename = "./data_files/rf_lastMonth.nc"
-download_file(url, filename)
+# Build list of (year, month) to try: last_month, last_month-1, -2, -3
+start = date(last_year, last_month, 15)
+months_to_try = [( (start - relativedelta(months=k)).year,
+                   (start - relativedelta(months=k)).month ) for k in range(0, 4)]
 
-ds = xr.open_dataset(filename, decode_times=False,engine="netcdf4")
-df.loc['Rain', 'LastMonth'] = ds['aprod'].sel(Y=lat, X=lon, T=t_value, method='nearest').values
+base_url = ("https://iridl.ldeo.columbia.edu/"
+            "SOURCES/.NOAA/.NCEP/.CPC/.CAMS_OPI/.v0208/.anomaly_9120/.prcp")
 
-source_df.loc['Rain','LastMonth'] = 'https://iridl.ldeo.columbia.edu/maproom/Global/Precipitation/Anomaly.html'
+success = False
+for y, m in months_to_try:
+    try:
+        # e.g., "Aug 2025"
+        month_str = f"{calendar.month_abbr[m]} {y}"
+        t_value = ((y - 1960) * 12 + (m - 1)) + 0.5
+
+        url = (
+            f"{base_url}"
+            f"/T/%28days%20since%201960-01-01%29streamgridunitconvert"
+            f"/T/differential_mul/T/%28months%20since%201960-01-01%29streamgridunitconvert"
+            f"//units/%28mm/month%29def//long_name/%28Precipitation%20Anomaly%29def"
+            f"/DATA/-500/-450/-400/-350/-300/-250/-200/-150/-100/-50/-25/25/50/100/150/200/250/300/350/400/450/500/VALUES/prcp_anomaly_max500_colors2"
+            f"/Y/%285N%29%2810N%29RANGEEDGES/X/%28130E%29%28140E%29RANGEEDGES"
+            f"/T/%28{month_str}%29%28{month_str}%29RANGEEDGES/data.nc"
+        )
+
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        with open(filename, "wb") as f:
+            f.write(r.content)
+
+        ds = xr.open_dataset(filename, decode_times=False, engine="netcdf4")
+
+        val = ds["aprod"].sel(Y=lat, X=lon, T=t_value, method="nearest").item()
+
+        df.loc["Rain", "LastMonth"] = float(val)
+        df.loc["Rain", "LastMonthName"] = month_str
+
+        source_df.loc["Rain", "LastMonth"] = (
+            "https://iridl.ldeo.columbia.edu/maproom/Global/Precipitation/Anomaly.html"
+        )
+        print(f"Saved month: {month_str}")
+        success = True
+        break  
+    except Exception:
+        continue
+
+if not success:
+    df.loc["Rain", "LastMonth"] = np.nan
+    df.loc["Rain", "LastMonthName"] = "Missing"
+
 
 grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/prate.01.{today_str}{cycle}.daily.grb2"
 idx_url = grib_url + ".idx"
@@ -152,27 +185,55 @@ today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
 first_of_this_month = today_hst.replace(day=1)
 last_month_date = first_of_this_month - timedelta(days=1)
 last_month_str = last_month_date.strftime("%b %Y")  # e.g. "Apr 2025"
+filename = "../data/tmean_lastMonth.nc"
 
-# 2. Build dynamic URL
+# Build list of (year, month) to try: last_month, last_month-1, -2, -3
+start = date(last_year, last_month, 15)
+months_to_try = [( (start - relativedelta(months=k)).year,
+                   (start - relativedelta(months=k)).month ) for k in range(0, 4)]
+
 base_url = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.CAMS/.anomaly/.temp_9120"
-url = (
-    f"{base_url}"
-    f"/Y/%285N%29%2810N%29RANGEEDGES/X/%28130E%29%28140E%29RANGEEDGES"
-    f"/T/%28{last_month_str}%29%28{last_month_str}%29RANGEEDGES/data.nc"
-)
 
-filename = "./data_files/tmean_lastMonth.nc"
-response = requests.get(url)
+success = False
+for y, m in months_to_try:
+    try:
+        # e.g., "Aug 2025"
+        month_str = f"{calendar.month_abbr[m]} {y}"
 
-with open(filename, 'wb') as f:
-    f.write(response.content)
+        # Recompute T index for this (y, m)
+        t_value = ((y - 1960) * 12 + (m - 1)) + 0.5
+        url = (
+            f"{base_url}"
+            f"/Y/%285N%29%2810N%29RANGEEDGES/X/%28130E%29%28140E%29RANGEEDGES"
+            f"/T/%28{month_str}%29%28{month_str}%29RANGEEDGES/data.nc"
+        )
 
-ds = xr.open_dataset(filename, decode_times=False, use_cftime=True)
-tmean_lastmonth_value_c = ds['temp_9120'].sel(Y=lat, X=lon, T=t_value,method='nearest').values
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        with open(filename, "wb") as f:
+            f.write(r.content)
 
-tmean_lastmonth_value_f = tmean_lastmonth_value_c * 9/5
-df.loc['TMean','LastMonth']=tmean_lastmonth_value_f
-source_df.loc['TMean','LastMonth'] = 'http://iridl.ldeo.columbia.edu/maproom/Global/Atm_Temp/Anomaly.html'
+        ds = xr.open_dataset(filename, decode_times=False, engine="netcdf4")
+
+        # Pull value at nearest (lat, lon, T)
+        val = ds["aprod"].sel(Y=lat, X=lon, T=t_value, method="nearest").item()
+
+        df.loc["TMean", "LastMonth"] = float(val)
+        df.loc["TMean", "Month"] = month_str
+        source_df.loc["TMean", "LastMonth"] = (
+            "https://iridl.ldeo.columbia.edu/maproom/Global/Precipitation/Anomaly.html"
+        )
+        print(f"Saved month: {month_str}")
+        success = True
+        break  
+    except Exception:
+        # try the next earlier month
+        continue
+
+if not success:
+    # Optional: mark as missing so downstream logic is explicit
+    df.loc["TMean", "LastMonth"] = np.nan
+    df.loc["Tmean", "LastMonthName"] = "Missing"
 
 grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/tmp2m.01.{today_str}{cycle}.daily.grb2"
 idx_url = grib_url + ".idx"
