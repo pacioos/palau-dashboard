@@ -45,24 +45,19 @@ def download_file(url, local_path, retries=5):
         raise RuntimeError(f"Download failed: {url}\n{e}")
 
 
-# Palau lat/lon
-lat = 7.5150
-lon = 134.5825
-
-min_lat_ssh, max_lat_ssh = 7.0, 8.0
-min_lon_ssh, max_lon_ssh = 134.0, 135.0
-
 columns = [
     "LastMonth", "LastMonthDate",
     "Forecast", "ForecastDate",
     "Outlook", "OutlookDate"
 ]
+
 df = pd.DataFrame(columns=columns)
 
 today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
 today_str = today_hst.strftime("%Y%m%d")
 yest_hst = today_hst - timedelta(days=1)
 yest_str = yest_hst.strftime("%Y%m%d")
+
 
 today = datetime.utcnow()
 if today.month == 1:
@@ -71,6 +66,7 @@ if today.month == 1:
 else:
     last_month = today.month - 1
     last_year = today.year
+
 
 months_since_1960 = (last_year - 1960) * 12 + (last_month - 1)
 t_value = months_since_1960 + 0.5 
@@ -90,6 +86,8 @@ for y, m in months_to_try:
     try:
         # e.g., "Aug 2025"
         month_str = f"{calendar.month_abbr[m]} {y}"
+
+        # Recompute T index for this (y, m)
         t_value = ((y - 1960) * 12 + (m - 1)) + 0.5
 
         url = (
@@ -109,20 +107,21 @@ for y, m in months_to_try:
 
         ds = xr.open_dataset(filename, decode_times=False, engine="netcdf4")
 
+        # Pull value at nearest (lat, lon, T)
         val = ds["aprod"].sel(Y=lat, X=lon, T=t_value, method="nearest").item()
 
         df.loc["Rain", "LastMonth"] = float(val)
-        df.loc["Rain", "LastMonthName"] = month_str
-
-        print(f"Saved month: {month_str}")
+        df.loc["Rain", "LastMonthDate"] = month_str
         success = True
         break  
     except Exception:
+        # try the next earlier month
         continue
 
 if not success:
+    # Optional: mark as missing so downstream logic is explicit
     df.loc["Rain", "LastMonth"] = np.nan
-    df.loc["Rain", "LastMonthName"] = np.nan
+    df.loc["Rain", "LastMonthDate"] = "Missing"
 
 #Rain forecast
 url = "https://access-s.clide.cloud/files/global/weekly/data/rain.forecast.anom.weekly.nc"
@@ -296,7 +295,6 @@ df.loc["TMean", "OutlookDate"] = tmean_outlook_date
 # source_df.loc['Wind','Forecast'] = 'https://www.ncei.noaa.gov/products/weather-climate-models/climate-forecast-system'
 
 
-df = df.astype(float)
 df.reset_index(inplace=True)
 df.rename(columns={"index": "Type"}, inplace=True)
 
