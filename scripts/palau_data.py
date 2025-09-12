@@ -71,7 +71,7 @@ else:
 months_since_1960 = (last_year - 1960) * 12 + (last_month - 1)
 t_value = months_since_1960 + 0.5 
 
-filename = "../data/rf_lastMonth.nc"
+filename = "./data_files/rf_lastMonth.nc"
 
 # Build list of (year, month) to try: last_month, last_month-1, -2, -3
 start = date(last_year, last_month, 15)
@@ -165,7 +165,7 @@ today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
 first_of_this_month = today_hst.replace(day=1)
 last_month_date = first_of_this_month - timedelta(days=1)
 last_month_str = last_month_date.strftime("%b %Y")  # e.g. "Apr 2025"
-filename = "../data/tmean_lastMonth.nc"
+filename = "./data_files/tmean_lastMonth.nc"
 
 # Build list of (year, month) to try: last_month, last_month-1, -2, -3
 start = date(last_year, last_month, 15)
