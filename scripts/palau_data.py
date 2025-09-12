@@ -104,10 +104,9 @@ for y, m in months_to_try:
 
         ds = xr.open_dataset(filename, decode_times=False, engine="netcdf4")
 
-        # Pull value at nearest (lat, lon, T)
         val = ds["aprod"].sel(Y=lat, X=lon, T=t_value, method="nearest").item()
-
-        df.loc["Rain", "LastMonth"] = float(val)
+        val_in = val/25.4
+        df.loc["Rain", "LastMonth"] = float(val_in)
         df.loc["Rain", "LastMonthDate"] = month_str
         success = True
         break  
@@ -121,19 +120,24 @@ if not success:
     df.loc["Rain", "LastMonthDate"] = "Missing"
 
 #Rain forecast
-url = "https://access-s.clide.cloud/files/global/weekly/data/rain.forecast.anom.weekly.nc"
-filename = "./data_files/rf.forecast.nc"
+url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{yest_str}.wkly.anom.nc'
+filename = "../data/rf.forecast.nc"
 
 response = requests.get(url)
-
-download_file(url, filename)
-
+if response.status_code == 200:
+    with open(filename, 'wb') as f:
+        f.write(response.content)
+else:
+    print(f"Failed to download file. Status code: {response.status_code}")
+    
 rf_forecast_dataset = xr.open_dataset(filename)
 rf_forecast_palau = rf_forecast_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
 rf_forecast_palau_df = rf_forecast_palau.to_dataframe().reset_index()
 rf_forecast_value = rf_forecast_palau_df['rain'].iloc[1]
+rf_forecast_value_in = rf_forecast_value/25.4
 rf_forecast_date = rf_forecast_palau_df['time'].iloc[1]
-df.loc["Rain", "Forecast"] = rf_forecast_value
+
+df.loc["Rain", "Forecast"] = rf_forecast_value_in
 df.loc["Rain", "ForecastDate"] = rf_forecast_date
 
 #Rain outlook
@@ -152,9 +156,10 @@ rf_outlook_palau = rf_outlook_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_
 
 rf_outlook_palau_df = rf_outlook_palau.to_dataframe().reset_index()
 rf_outlook_value = rf_outlook_palau_df['rain'].iloc[0]
+rf_outlook_value_in = rf_outlook_value/25.4
 rf_outlook_time = rf_outlook_palau_df['time'].iloc[0]
 
-df.loc["Rain", "Outlook"] = rf_outlook_value
+df.loc["Rain", "Outlook"] = rf_outlook_value_in
 df.loc["Rain", "OutlookDate"] = rf_outlook_time
 
 #Temp last month
@@ -197,7 +202,6 @@ for y, m in months_to_try:
 
         df.loc["TMean", "LastMonth"] = float(val)
         df.loc["TMean", "Month"] = month_str
-        print(f"Saved month: {month_str}")
         success = True
         break  
     except Exception:
