@@ -131,9 +131,9 @@ else:
     print(f"Failed to download file. Status code: {response.status_code}")
     
 rf_forecast_dataset = xr.open_dataset(filename)
-rf_forecast_palau = rf_forecast_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
+rf_forecast_palau = rf_forecast_dataset['anom'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
 rf_forecast_palau_df = rf_forecast_palau.to_dataframe().reset_index()
-rf_forecast_value = rf_forecast_palau_df['rain'].iloc[1]
+rf_forecast_value = rf_forecast_palau_df['anom'].iloc[1]
 rf_forecast_value_in = rf_forecast_value/25.4
 rf_forecast_date = rf_forecast_palau_df['time'].iloc[1]
 
