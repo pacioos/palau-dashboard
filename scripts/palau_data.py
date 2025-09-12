@@ -49,7 +49,11 @@ lon = 134.5825
 min_lat_ssh, max_lat_ssh = 7.0, 8.0
 min_lon_ssh, max_lon_ssh = 134.0, 135.0
 
-columns = ["LastMonth","LastMonthName","Current", "Forecast", "Outlook"]
+columns = [
+    "LastMonth", "LastMonthDate",
+    "Forecast", "ForecastDate",
+    "Outlook", "OutlookDate"
+]
 df = pd.DataFrame(columns=columns)
 source_df = pd.DataFrame(columns=columns)
 
@@ -57,8 +61,6 @@ today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
 today_str = today_hst.strftime("%Y%m%d")
 yest_hst = today_hst - timedelta(days=1)
 yest_str = yest_hst.strftime("%Y%m%d")
-
-cycle = "06"
 
 today = datetime.utcnow()
 if today.month == 1:
@@ -123,31 +125,7 @@ if not success:
     df.loc["Rain", "LastMonth"] = np.nan
     df.loc["Rain", "LastMonthName"] = np.nan
 
-
-grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/prate.01.{today_str}{cycle}.daily.grb2"
-idx_url = grib_url + ".idx"
-
-grib_file = "./data_files/rf_current.grb2"
-idx_file = grib_file + ".idx"
-
-download_file(grib_url, grib_file)
-download_file(idx_url, idx_file)
-
-ds = xr.open_dataset(grib_file, engine="cfgrib")
-
-palau = ds.sel(latitude=lat,longitude=lon,method='nearest')
-rf_palau_df = palau[['prate']].to_dataframe().reset_index()
-
-palau_tz = ZoneInfo("Pacific/Palau")
-now_palau = datetime.now(palau_tz)
-
-rf_palau_df['valid_time'] = pd.to_datetime(rf_palau_df['valid_time']).dt.tz_localize('UTC').dt.tz_convert(palau_tz)
-rf_palau_1d_df = rf_palau_df[rf_palau_df['valid_time'].dt.date == now_palau.date()]
-rf_1d_sum = rf_palau_df['prate'].sum()
-
-df.loc["Rain", "Current"] = rf_1d_sum
-source_df.loc['Rain','Current'] = 'https://www.ncei.noaa.gov/products/weather-climate-models/climate-forecast-system'
-
+#Rain forecast
 url = "https://access-s.clide.cloud/files/global/weekly/data/rain.forecast.anom.weekly.nc"
 filename = "./data_files/rf.forecast.nc"
 
@@ -159,9 +137,11 @@ rf_forecast_dataset = xr.open_dataset(filename)
 rf_forecast_palau = rf_forecast_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
 rf_forecast_palau_df = rf_forecast_palau.to_dataframe().reset_index()
 rf_forecast_value = rf_forecast_palau_df['rain'].iloc[1]
+rf_forecast_date = rf_forecast_palau_df['time'].iloc[1]
 df.loc["Rain", "Forecast"] = rf_forecast_value
-source_df.loc['Rain','Forecast'] = 'http://www.bom.gov.au/climate/pacific/outlooks/'
+df.loc["Rain", "ForecastDate"] = rf_forecast_date
 
+#Rain outlook
 url = "https://access-s.clide.cloud/files/global/monthly/data/rain.forecast.anom.monthly.nc"
 filename = "./data_files/rf.outlook.nc"
 
@@ -177,11 +157,12 @@ rf_outlook_palau = rf_outlook_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_
 
 rf_outlook_palau_df = rf_outlook_palau.to_dataframe().reset_index()
 rf_outlook_value = rf_outlook_palau_df['rain'].iloc[0]
+rf_outlook_time = rf_outlook_palau_df['time'].iloc[0]
 
 df.loc["Rain", "Outlook"] = rf_outlook_value
-source_df.loc['Rain','Outlook'] = 'http://www.bom.gov.au/climate/pacific/outlooks/'
+df.loc["Rain", "OutlookDate"] = rf_outlook_time
 
-
+#Temp last month
 today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
 first_of_this_month = today_hst.replace(day=1)
 last_month_date = first_of_this_month - timedelta(days=1)
@@ -234,36 +215,9 @@ for y, m in months_to_try:
 if not success:
     # Optional: mark as missing so downstream logic is explicit
     df.loc["TMean", "LastMonth"] = np.nan
-    df.loc["Tmean", "LastMonthName"] = np.nan
+    df.loc["TMean", "LastMonthName"] = np.nan
 
-grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/tmp2m.01.{today_str}{cycle}.daily.grb2"
-idx_url = grib_url + ".idx"
-
-grib_file = "./data_files/tmean.current.grb2"
-
-idx_file = grib_file + ".idx"
-
-download_file(grib_url, grib_file)
-download_file(idx_url, idx_file)
-
-ds = xr.open_dataset(grib_file, engine="cfgrib")
-
-palau = ds.sel(latitude=lat,longitude=lon,method='nearest')
-temp_palau_df = palau[['t2m']].to_dataframe().reset_index()
-
-palau_tz = ZoneInfo("Pacific/Palau")
-now_palau = datetime.now(palau_tz)
-
-temp_palau_df['valid_time'] = pd.to_datetime(temp_palau_df['valid_time']).dt.tz_localize('UTC').dt.tz_convert(palau_tz)
-
-
-temp_palau_1d_df = temp_palau_df[temp_palau_df['valid_time'].dt.date == now_palau.date()]
-temp_1d_mean = temp_palau_df['t2m'].mean()
-temp_1d_mean_c = temp_1d_mean-273.15
-temp_1d_mean_f = temp_1d_mean_c*9/5+32
-df.loc["TMean", "Current"] = temp_1d_mean_f
-source_df.loc['TMean','Current'] = 'https://www.ncei.noaa.gov/products/weather-climate-models/climate-forecast-system'
-
+#Temp forecast
 url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{yest_str}.wkly.anom.nc'
 filename = "./data_files/tmean.forecast.nc"
 
@@ -279,11 +233,13 @@ tmean_forecast_dataset = xr.open_dataset(filename)
 tmean_forecast_dataset_palau = tmean_forecast_dataset['anom'].sel(lat=lat, lon=lon, method='nearest')
 tmean_forecast_palau_df = tmean_forecast_dataset_palau.to_dataframe().reset_index()
 
-tmean_forecast_value_c = tmean_forecast_palau_df['anom'].iloc[0]
+tmean_forecast_value_c = tmean_forecast_palau_df['anom'].iloc[1]
 tmean_forecast_value_f = tmean_forecast_value_c * 9/5
+tmean_forecast_date = tmean_forecast_palau_df['time'].iloc[1]
 df.loc["TMean", "Forecast"] = tmean_forecast_value_f
-source_df.loc['TMean','Forecast'] = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/'
+df.loc["TMean", "ForecastDate"] = tmean_forecast_date
 
+#Tmean outlook
 url = "https://www.cpc.ncep.noaa.gov/products/CFSv2/dataInd1/glbSSTMon.nc"
 filename = "./data_files/tmean.outlook.nc"
 
@@ -298,50 +254,50 @@ tmean_outlook_dataset = xr.open_dataset(filename)
 
 tmean_outlook_dataset_palau = tmean_outlook_dataset['anom'].sel(lat=lat, lon=lon, method='nearest')
 tmean_outlook_palau_df = tmean_outlook_dataset_palau.to_dataframe().reset_index()
-
-tmean_outlook_value_c = tmean_outlook_palau_df['anom'].iloc[1]
+tmean_outlook_value_c = tmean_outlook_palau_df['anom'].iloc[0]
 tmean_outlook_value_f = tmean_outlook_value_c * 9/5
+tmean_outlook_date = tmean_outlook_palau_df['time'].iloc[0]
+
 df.loc["TMean", "Outlook"] = tmean_outlook_value_f
-source_df.loc['TMean','Outlook'] = 'https://www.cpc.ncep.noaa.gov/products/CFSv2/CFSv2_body.html'
+df.loc["TMean", "OutlookDate"] = tmean_outlook_date
+
+# grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/wnd10m.01.{today_str}{cycle}.daily.grb2"
+# idx_url = grib_url + ".idx"
+
+# grib_file = "./data_files/wnd10m.cfs.daily.grb2"
+
+# idx_file = grib_file + ".idx"
+
+# download_file(grib_url, grib_file)
+# download_file(idx_url, idx_file)
+
+# ds = xr.open_dataset(grib_file, engine="cfgrib")
+# palau = ds.sel(latitude=lat,longitude=lon,method='nearest')
+# uv_palau_df = palau[['u10', 'v10']].to_dataframe().reset_index()
+
+# palau_tz = ZoneInfo("Pacific/Palau")
+# now_palau = datetime.now(palau_tz)
+# uv_palau_df['valid_time'] = pd.to_datetime(uv_palau_df['valid_time']).dt.tz_localize('UTC').dt.tz_convert(palau_tz)
+
+# start_date = (now_palau + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+# end_date = start_date + timedelta(days=7) - timedelta(seconds=1)
+
+# uv_palau_3m_df = uv_palau_df[
+#     (uv_palau_df['valid_time'] >= start_date) &
+#     (uv_palau_df['valid_time'] <= end_date)
+# ]
+# uv_palau_3m_df = uv_palau_3m_df.copy()
+# uv_palau_3m_df['wind_speed'] = np.sqrt(uv_palau_3m_df['u10']**2 + uv_palau_3m_df['v10']**2)
+# uv_palau_3m_df['Date'] = uv_palau_3m_df['valid_time'].dt.date
 
 
-grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/wnd10m.01.{today_str}{cycle}.daily.grb2"
-idx_url = grib_url + ".idx"
-
-grib_file = "./data_files/wnd10m.cfs.daily.grb2"
-
-idx_file = grib_file + ".idx"
-
-download_file(grib_url, grib_file)
-download_file(idx_url, idx_file)
-
-ds = xr.open_dataset(grib_file, engine="cfgrib")
-palau = ds.sel(latitude=lat,longitude=lon,method='nearest')
-uv_palau_df = palau[['u10', 'v10']].to_dataframe().reset_index()
-
-palau_tz = ZoneInfo("Pacific/Palau")
-now_palau = datetime.now(palau_tz)
-uv_palau_df['valid_time'] = pd.to_datetime(uv_palau_df['valid_time']).dt.tz_localize('UTC').dt.tz_convert(palau_tz)
-
-start_date = (now_palau + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-end_date = start_date + timedelta(days=7) - timedelta(seconds=1)
-
-uv_palau_3m_df = uv_palau_df[
-    (uv_palau_df['valid_time'] >= start_date) &
-    (uv_palau_df['valid_time'] <= end_date)
-]
-uv_palau_3m_df = uv_palau_3m_df.copy()
-uv_palau_3m_df['wind_speed'] = np.sqrt(uv_palau_3m_df['u10']**2 + uv_palau_3m_df['v10']**2)
-uv_palau_3m_df['Date'] = uv_palau_3m_df['valid_time'].dt.date
+# wind_speed_df = uv_palau_3m_df.groupby('Date')[['wind_speed']].max()
 
 
-wind_speed_df = uv_palau_3m_df.groupby('Date')[['wind_speed']].max()
+# result = wind_speed_df[["wind_speed"]].reset_index()
 
-
-result = wind_speed_df[["wind_speed"]].reset_index()
-
-result.to_json("./data/wind_speed.json",orient="records", date_format="iso")
-source_df.loc['Wind','Forecast'] = 'https://www.ncei.noaa.gov/products/weather-climate-models/climate-forecast-system'
+# result.to_json("./data/wind_speed.json",orient="records", date_format="iso")
+# source_df.loc['Wind','Forecast'] = 'https://www.ncei.noaa.gov/products/weather-climate-models/climate-forecast-system'
 
 
 df = df.astype(float)
