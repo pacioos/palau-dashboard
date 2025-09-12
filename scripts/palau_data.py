@@ -121,7 +121,7 @@ if not success:
 
 #Rain forecast
 url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{yest_str}.wkly.anom.nc'
-filename = "../data/rf.forecast.nc"
+filename = "./data_files/rf.forecast.nc"
 
 response = requests.get(url)
 if response.status_code == 200:
