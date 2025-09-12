@@ -1,7 +1,7 @@
 import numpy as np
 import requests
 import xarray as xr
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import pandas as pd
 import os
@@ -53,19 +53,16 @@ columns = [
 
 df = pd.DataFrame(columns=columns)
 
-today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
-today_str = today_hst.strftime("%Y%m%d")
-yest_hst = today_hst - timedelta(days=1)
-yest_str = yest_hst.strftime("%Y%m%d")
+now_utc = datetime.now(timezone.utc)
+today_str = now_utc.strftime("%Y%m%d")
+yest_str  = (now_utc - timedelta(days=1)).strftime("%Y%m%d")
 
-
-today = datetime.utcnow()
-if today.month == 1:
-    last_month = 12
-    last_year = today.year - 1
-else:
-    last_month = today.month - 1
-    last_year = today.year
+# --- Last month/year (robust across year boundaries) ---
+# Take the first day of this month in UTC, step back one day → you're in last month.
+prev_month_dt = (now_utc.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                 - timedelta(days=1))
+last_month = prev_month_dt.month
+last_year  = prev_month_dt.year
 
 
 months_since_1960 = (last_year - 1960) * 12 + (last_month - 1)
