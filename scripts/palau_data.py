@@ -1,45 +1,48 @@
 import numpy as np
 import requests
 import xarray as xr
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import pandas as pd
 import os
 import calendar
 from netCDF4 import num2date
-from dateutil.relativedelta import relativedelta
-
 import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from dateutil.relativedelta import relativedelta
+from datetime import date
+
+# Palau lat/lon
+lat = 7.5150
+lon = 134.5825
+
+min_lat_ssh, max_lat_ssh = 7.0, 8.0
+min_lon_ssh, max_lon_ssh = 134.0, 135.0
 
 os.makedirs("./data", exist_ok=True)
 os.makedirs("./data_files", exist_ok=True)
 
-def download_file(url, local_path, retries=5, wait=5):
+def download_file(url, local_path, retries=5):
     session = requests.Session()
     retry = Retry(
-        total=0,  # we’ll handle retry ourselves
-        backoff_factor=0,
-        status_forcelist=[]
+        total=retries,
+        backoff_factor=1,
+        status_forcelist=[502, 503, 504],
+        raise_on_status=False
     )
     session.mount("https://", HTTPAdapter(max_retries=retry))
 
-    for attempt in range(1, retries + 1):
-        try:
-            with session.get(url, stream=True, timeout=60) as r:
-                r.raise_for_status()
-                with open(local_path, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-            print(f"Downloaded: {url}")
-            return
-        except Exception as e:
-            print(f"[Attempt {attempt}/{retries}] Failed to download {url}:\n{e}")
-            if attempt == retries:
-                raise RuntimeError(f"Download failed after {retries} attempts: {url}")
-            time.sleep(wait)
+    try:
+        with session.get(url, stream=True, timeout=60) as r:
+            r.raise_for_status()
+            with open(local_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        print(f"Downloaded: {url}")
+    except Exception as e:
+        raise RuntimeError(f"Download failed: {url}\n{e}")
 
 
 # Palau lat/lon
@@ -55,7 +58,6 @@ columns = [
     "Outlook", "OutlookDate"
 ]
 df = pd.DataFrame(columns=columns)
-source_df = pd.DataFrame(columns=columns)
 
 today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
 today_str = today_hst.strftime("%Y%m%d")
@@ -112,9 +114,6 @@ for y, m in months_to_try:
         df.loc["Rain", "LastMonth"] = float(val)
         df.loc["Rain", "LastMonthName"] = month_str
 
-        source_df.loc["Rain", "LastMonth"] = (
-            "https://iridl.ldeo.columbia.edu/maproom/Global/Precipitation/Anomaly.html"
-        )
         print(f"Saved month: {month_str}")
         success = True
         break  
@@ -202,9 +201,6 @@ for y, m in months_to_try:
 
         df.loc["TMean", "LastMonth"] = float(val)
         df.loc["TMean", "Month"] = month_str
-        source_df.loc["TMean", "LastMonth"] = (
-            "https://iridl.ldeo.columbia.edu/maproom/Global/Precipitation/Anomaly.html"
-        )
         print(f"Saved month: {month_str}")
         success = True
         break  
@@ -305,7 +301,3 @@ df.reset_index(inplace=True)
 df.rename(columns={"index": "Type"}, inplace=True)
 
 df.to_json("./data/palau_rf_temp.json", orient="records", date_format="iso")
-source_df.reset_index(inplace=True)
-source_df.rename(columns={"index": "Type"}, inplace=True)
-
-source_df.to_json("./data/sources.json", orient="records", date_format="iso")
