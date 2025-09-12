@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install numpy requests xarray pandas netCDF4 cfgrib zoneinfo
+          pip install numpy requests xarray pandas netCDF4 cfgrib
 
       - name: Run data fetch script
         run: python scripts/palau_data.py
