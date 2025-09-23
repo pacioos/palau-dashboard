@@ -1,0 +1,72 @@
+[
+  {
+    "station_no": "PW7134",
+    "station_name": "Ngeremlengui AWS",
+    "meta": {
+      "last3days": {
+        "temp": "HOT",
+        "rain": "WET"
+      },
+      "next3days": {
+        "temp": "HOT",
+        "rain": "DRY"
+      }
+    }
+  },
+  {
+    "station_no": "PW74021",
+    "station_name": "Peleliu AWS",
+    "meta": {
+      "last3days": {
+        "temp": "HOT",
+        "rain": "WET"
+      },
+      "next3days": {
+        "temp": "HOT",
+        "rain": "DRY"
+      }
+    }
+  },
+  {
+    "station_no": "PW74351",
+    "station_name": "Airai AWS",
+    "meta": {
+      "last3days": {
+        "temp": "HOT",
+        "rain": "WET"
+      },
+      "next3days": {
+        "temp": "HOT",
+        "rain": "DRY"
+      }
+    }
+  },
+  {
+    "station_no": "PW74450",
+    "station_name": "Aimeliik AWS",
+    "meta": {
+      "last3days": {
+        "temp": "HOT",
+        "rain": "WET"
+      },
+      "next3days": {
+        "temp": "HOT",
+        "rain": "DRY"
+      }
+    }
+  },
+  {
+    "station_no": "PW74561",
+    "station_name": "Melekeok AWS",
+    "meta": {
+      "last3days": {
+        "temp": "COOL",
+        "rain": "WET"
+      },
+      "next3days": {
+        "temp": "HOT",
+        "rain": "DRY"
+      }
+    }
+  }
+]
