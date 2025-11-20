@@ -1,6 +1,7 @@
 {
   "Index": "None",
-  "temp": "NA",
-  "rain": "NA",
-  "Solar_rad": "NA"
+  "temp_today": "NA",
+  "temp_next3days": "NA",
+  "rain_last3days": "NA",
+  "Solar_rad_next3days": "NA"
 }
