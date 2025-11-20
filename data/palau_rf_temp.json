@@ -1,1 +1,5 @@
+<<<<<<< Updated upstream
 [{"Type":"Rain","LastMonth":-0.4117890981,"LastMonthDate":"Oct 2025","Forecast":-0.0681251138,"ForecastDate":"2025-11-26T00:00:00.000","Outlook":1.3749651909,"OutlookDate":"2025-12-16T12:00:00.000","LastMonthName":null},{"Type":"TMean","LastMonth":null,"LastMonthDate":null,"Forecast":1.3743175268,"ForecastDate":"2025-11-26T00:00:00.000","Outlook":1.0734508038,"OutlookDate":"2025-12-01T00:00:00.000","LastMonthName":null}]
+=======
+[{"Type":"Rain","LastMonth":-0.4117890981,"LastMonthDate":"October 2025","Forecast":-0.0681251138,"ForecastDate":"November 26, 2025","Outlook":0.0909225196,"OutlookDate":"December 2025"},{"Type":"TMean","LastMonth":0.7620000243,"LastMonthDate":"October 2025","Forecast":1.3743175268,"ForecastDate":"November 26, 2025","Outlook":1.0734508038,"OutlookDate":"December 2025"}]
+>>>>>>> Stashed changes
