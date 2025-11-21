@@ -12,6 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dateutil.relativedelta import relativedelta
 from datetime import date
+import cftime
 
 # Palau lat/lon
 lat = 7.5150
@@ -52,72 +53,54 @@ columns = [
 ]
 
 df = pd.DataFrame(columns=columns)
+HST = ZoneInfo("Pacific/Honolulu")
 
-now_utc = datetime.now(timezone.utc)
-today_str = now_utc.strftime("%Y%m%d")
-yest_str  = (now_utc - timedelta(days=1)).strftime("%Y%m%d")
+now_hst = datetime.now(HST)
+today_str = now_hst.strftime("%Y%m%d")
+yest_str  = (now_hst - timedelta(days=1)).strftime("%Y%m%d")
 
 # --- Last month/year (robust across year boundaries) ---
-# Take the first day of this month in UTC, step back one day → you're in last month.
-prev_month_dt = (now_utc.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                 - timedelta(days=1))
+prev_month_dt = (
+    now_hst.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    - timedelta(days=1)
+)
+
 last_month = prev_month_dt.month
 last_year  = prev_month_dt.year
 
-
 months_since_1960 = (last_year - 1960) * 12 + (last_month - 1)
-t_value = months_since_1960 + 0.5 
+t_value = months_since_1960 + 0.5
 
-filename = "./data_files/rf_lastMonth.nc"
+url = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.CAMS_OPI/.v0208/.anomaly_9120/.prcp/T/%28days%20since%201960-01-01%29streamgridunitconvert/T/differential_mul/T/%28months%20since%201960-01-01%29streamgridunitconvert//units/%28mm/month%29def//long_name/%28Precipitation%20Anomaly%29def/DATA/-500/-450/-400/-350/-300/-250/-200/-150/-100/-50/-25/25/50/100/150/200/250/300/350/400/450/500/VALUES/prcp_anomaly_max500_colors2/dods"
+ds = xr.open_dataset(url, decode_times=False)
 
-# Build list of (year, month) to try: last_month, last_month-1, -2, -3
-start = date(last_year, last_month, 15)
-months_to_try = [( (start - relativedelta(months=k)).year,
-                   (start - relativedelta(months=k)).month ) for k in range(0, 4)]
+time_vals = ds["T"].values
+units = ds["T"].attrs.get("units", "months since 1960-01-01")
+calendar = ds["T"].attrs.get("calendar", "360_day")
 
-base_url = ("https://iridl.ldeo.columbia.edu/"
-            "SOURCES/.NOAA/.NCEP/.CPC/.CAMS_OPI/.v0208/.anomaly_9120/.prcp")
+if calendar == "360":
+    calendar = "360_day"
 
-success = False
-for y, m in months_to_try:
-    try:
-        # e.g., "Aug 2025"
-        month_str = f"{calendar.month_abbr[m]} {y}"
+decoded_time = cftime.num2date(time_vals, units=units, calendar=calendar)
 
-        # Recompute T index for this (y, m)
-        t_value = ((y - 1960) * 12 + (m - 1)) + 0.5
+ds = ds.assign_coords(T=("T", decoded_time))
 
-        url = (
-            f"{base_url}"
-            f"/T/%28days%20since%201960-01-01%29streamgridunitconvert"
-            f"/T/differential_mul/T/%28months%20since%201960-01-01%29streamgridunitconvert"
-            f"//units/%28mm/month%29def//long_name/%28Precipitation%20Anomaly%29def"
-            f"/DATA/-500/-450/-400/-350/-300/-250/-200/-150/-100/-50/-25/25/50/100/150/200/250/300/350/400/450/500/VALUES/prcp_anomaly_max500_colors2"
-            f"/Y/%285N%29%2810N%29RANGEEDGES/X/%28130E%29%28140E%29RANGEEDGES"
-            f"/T/%28{month_str}%29%28{month_str}%29RANGEEDGES/data.nc"
-        )
+lat_sel = 7.5
+lon_sel = 134.5
 
-        r = requests.get(url, timeout=60)
-        r.raise_for_status()
-        with open(filename, "wb") as f:
-            f.write(r.content)
+point = ds.sel(Y=lat_sel, X=lon_sel, method="nearest")
+last_time = ds["T"].values[-1]
+print("Last time:", last_time)
 
-        ds = xr.open_dataset(filename, decode_times=False, engine="netcdf4")
+last_month_ds = ds.sel(T=last_time)
 
-        val = ds["aprod"].sel(Y=lat, X=lon, T=t_value, method="nearest").item()
-        val_in = val/25.4
-        df.loc["Rain", "LastMonth"] = float(val_in)
-        df.loc["Rain", "LastMonthDate"] = month_str
-        success = True
-        break  
-    except Exception:
-        # try the next earlier month
-        continue
-
-if not success:
-    # Optional: mark as missing so downstream logic is explicit
-    df.loc["Rain", "LastMonth"] = np.nan
-    df.loc["Rain", "LastMonthDate"] = "Missing"
+# Extract value for last month at the nearest grid cell to your point
+rf_last = point.sel(T=last_time)["aprod"].values.item()
+rf_last_in = rf_last / 25.4
+month = last_time.strftime("%B %Y")
+print(f"Rainfall anomaly for {month}: {rf_last_in:.2f} in")
+df.loc["Rain", "LastMonth"] = float(rf_last_in)
+df.loc["Rain", "LastMonthDate"] = month
 
 #Rain forecast
 url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{yest_str}.wkly.anom.nc'
@@ -138,7 +121,7 @@ rf_forecast_value_in = rf_forecast_value/25.4
 rf_forecast_date = rf_forecast_palau_df['time'].iloc[1]
 
 df.loc["Rain", "Forecast"] = rf_forecast_value_in
-df.loc["Rain", "ForecastDate"] = rf_forecast_date
+df.loc["Rain", "ForecastDate"] = rf_forecast_date.strftime("%B %d, %Y")
 
 #Rain outlook
 url = "https://access-s.clide.cloud/files/global/monthly/data/rain.forecast.anom.monthly.nc"
@@ -160,58 +143,38 @@ rf_outlook_value_in = rf_outlook_value/25.4
 rf_outlook_time = rf_outlook_palau_df['time'].iloc[0]
 
 df.loc["Rain", "Outlook"] = rf_outlook_value_in
-df.loc["Rain", "OutlookDate"] = rf_outlook_time
+df.loc["Rain", "OutlookDate"] = rf_outlook_time.strftime("%B %Y")
 
 #Temp last month
-today_hst = datetime.now(ZoneInfo("Pacific/Honolulu"))
-first_of_this_month = today_hst.replace(day=1)
-last_month_date = first_of_this_month - timedelta(days=1)
-last_month_str = last_month_date.strftime("%b %Y")  # e.g. "Apr 2025"
-filename = "./data_files/tmean_lastMonth.nc"
+url = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.CAMS/.anomaly/.temp_9120/dods"
+ds = xr.open_dataset(url, decode_times=False)
 
-# Build list of (year, month) to try: last_month, last_month-1, -2, -3
-start = date(last_year, last_month, 15)
-months_to_try = [( (start - relativedelta(months=k)).year,
-                   (start - relativedelta(months=k)).month ) for k in range(0, 4)]
+time_vals = ds["T"].values
+units = ds["T"].attrs.get("units", "months since 1960-01-01")
+calendar = ds["T"].attrs.get("calendar", "360_day")
 
-base_url = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.CAMS/.anomaly/.temp_9120"
+if calendar == "360":
+    calendar = "360_day"
 
-success = False
-for y, m in months_to_try:
-    try:
-        # e.g., "Aug 2025"
-        month_str = f"{calendar.month_abbr[m]} {y}"
+decoded_time = cftime.num2date(time_vals, units=units, calendar=calendar)
 
-        # Recompute T index for this (y, m)
-        t_value = ((y - 1960) * 12 + (m - 1)) + 0.5
-        url = (
-            f"{base_url}"
-            f"/Y/%285N%29%2810N%29RANGEEDGES/X/%28130E%29%28140E%29RANGEEDGES"
-            f"/T/%28{month_str}%29%28{month_str}%29RANGEEDGES/data.nc"
-        )
+ds = ds.assign_coords(T=("T", decoded_time))
 
-        r = requests.get(url, timeout=60)
-        r.raise_for_status()
-        with open(filename, "wb") as f:
-            f.write(r.content)
+lat_sel = 7.5
+lon_sel = 134.5
 
-        ds = xr.open_dataset(filename, decode_times=False, engine="netcdf4")
+point = ds.sel(Y=lat_sel, X=lon_sel, method="nearest")
+last_time = ds["T"].values[-1]
 
-        # Pull value at nearest (lat, lon, T)
-        val = ds["aprod"].sel(Y=lat, X=lon, T=t_value, method="nearest").item()
+last_month_ds = ds.sel(T=last_time)
 
-        df.loc["TMean", "LastMonth"] = float(val)
-        df.loc["TMean", "Month"] = month_str
-        success = True
-        break  
-    except Exception:
-        # try the next earlier month
-        continue
+# Extract value for last month at the nearest grid cell to your point
+tanom_last = point.sel(T=last_time)["temp_9120"].values.item()
+tanom_last_f = tanom_last * 9/5
+month_str = last_time.strftime("%B %Y")
 
-if not success:
-    # Optional: mark as missing so downstream logic is explicit
-    df.loc["TMean", "LastMonth"] = np.nan
-    df.loc["TMean", "LastMonthName"] = np.nan
+df.loc["TMean", "LastMonth"] = float(tanom_last_f)
+df.loc["TMean", "LastMonthDate"] = month_str
 
 #Temp forecast
 url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{yest_str}.wkly.anom.nc'
@@ -233,7 +196,7 @@ tmean_forecast_value_c = tmean_forecast_palau_df['anom'].iloc[1]
 tmean_forecast_value_f = tmean_forecast_value_c * 9/5
 tmean_forecast_date = tmean_forecast_palau_df['time'].iloc[1]
 df.loc["TMean", "Forecast"] = tmean_forecast_value_f
-df.loc["TMean", "ForecastDate"] = tmean_forecast_date
+df.loc["TMean", "ForecastDate"] = tmean_forecast_date.strftime("%B %d, %Y")
 
 #Tmean outlook
 url = "https://www.cpc.ncep.noaa.gov/products/CFSv2/dataInd1/glbSSTMon.nc"
@@ -255,46 +218,47 @@ tmean_outlook_value_f = tmean_outlook_value_c * 9/5
 tmean_outlook_date = tmean_outlook_palau_df['time'].iloc[0]
 
 df.loc["TMean", "Outlook"] = tmean_outlook_value_f
-df.loc["TMean", "OutlookDate"] = tmean_outlook_date
+df.loc["TMean", "OutlookDate"] = tmean_outlook_date.strftime("%B %Y")
 
-# grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/wnd10m.01.{today_str}{cycle}.daily.grb2"
-# idx_url = grib_url + ".idx"
+cycle="18" 
+grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/wnd10m.01.{today_str}{cycle}.daily.grb2" 
+idx_url = grib_url + ".idx" 
+grib_file = "../data/wnd10m.cfs.daily.grb2" 
+idx_file = grib_file + ".idx" 
 
-# grib_file = "./data_files/wnd10m.cfs.daily.grb2"
+download_file(grib_url, grib_file) 
+download_file(idx_url, idx_file) 
 
-# idx_file = grib_file + ".idx"
+ds = xr.open_dataset(grib_file, engine="cfgrib") 
+palau = ds.sel(latitude=lat,longitude=lon,method='nearest') 
+uv_palau_df = palau[['u10', 'v10']].to_dataframe().reset_index() 
+palau_tz = ZoneInfo("Pacific/Palau") 
 
-# download_file(grib_url, grib_file)
-# download_file(idx_url, idx_file)
+now_palau = datetime.now(palau_tz) 
+uv_palau_df['valid_time'] = pd.to_datetime(uv_palau_df['valid_time']).dt.tz_localize('UTC').dt.tz_convert(palau_tz) 
 
-# ds = xr.open_dataset(grib_file, engine="cfgrib")
-# palau = ds.sel(latitude=lat,longitude=lon,method='nearest')
-# uv_palau_df = palau[['u10', 'v10']].to_dataframe().reset_index()
+start_date = (now_palau).replace(hour=0, minute=0, second=0, microsecond=0) 
+end_date = start_date + timedelta(days=6) - timedelta(seconds=1) 
 
-# palau_tz = ZoneInfo("Pacific/Palau")
-# now_palau = datetime.now(palau_tz)
-# uv_palau_df['valid_time'] = pd.to_datetime(uv_palau_df['valid_time']).dt.tz_localize('UTC').dt.tz_convert(palau_tz)
+uv_palau_3m_df = uv_palau_df[ (uv_palau_df['valid_time'] >= start_date) & (uv_palau_df['valid_time'] <= end_date) ] 
+uv_palau_3m_df = uv_palau_3m_df.copy() 
+uv_palau_3m_df['wind_speed'] = np.sqrt(uv_palau_3m_df['u10']**2 + uv_palau_3m_df['v10']**2) 
+uv_palau_3m_df['Date'] = uv_palau_3m_df['valid_time'].dt.date 
 
-# start_date = (now_palau + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-# end_date = start_date + timedelta(days=7) - timedelta(seconds=1)
+wind_speed_df = uv_palau_3m_df.groupby('Date')[['wind_speed']].max() 
+try:
+    os.remove(grib_file)
+except FileNotFoundError:
+    pass
 
-# uv_palau_3m_df = uv_palau_df[
-#     (uv_palau_df['valid_time'] >= start_date) &
-#     (uv_palau_df['valid_time'] <= end_date)
-# ]
-# uv_palau_3m_df = uv_palau_3m_df.copy()
-# uv_palau_3m_df['wind_speed'] = np.sqrt(uv_palau_3m_df['u10']**2 + uv_palau_3m_df['v10']**2)
-# uv_palau_3m_df['Date'] = uv_palau_3m_df['valid_time'].dt.date
+try:
+    os.remove(idx_file)
+except FileNotFoundError:
+    pass
 
+result = wind_speed_df[["wind_speed"]].reset_index()
 
-# wind_speed_df = uv_palau_3m_df.groupby('Date')[['wind_speed']].max()
-
-
-# result = wind_speed_df[["wind_speed"]].reset_index()
-
-# result.to_json("./data/wind_speed.json",orient="records", date_format="iso")
-# source_df.loc['Wind','Forecast'] = 'https://www.ncei.noaa.gov/products/weather-climate-models/climate-forecast-system'
-
+result.to_json("./data/wind_speed.json",orient="records", date_format="iso")
 
 df.reset_index(inplace=True)
 df.rename(columns={"index": "Type"}, inplace=True)
