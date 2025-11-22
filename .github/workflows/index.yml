@@ -24,6 +24,12 @@ jobs:
         run: |
           pip install numpy requests xarray pandas netCDF4 cfgrib cdsapi>=0.7.7
 
+      - name: Set up CDS API credentials
+         run: |
+          mkdir -p $HOME
+          echo "url: ${{ secrets.CDSAPI_URL }}" > $HOME/.cdsapirc
+          echo "key: ${{ secrets.CDSAPI_KEY }}" >> $HOME/.cdsapirc
+
       - name: Run data index script
         run: python scripts/index.py
 
