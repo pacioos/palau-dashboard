@@ -6,6 +6,7 @@ from collections import defaultdict
 from zoneinfo import ZoneInfo
 import pandas as pd
 import numpy as np
+import os
 
 url = "https://kukau.org/avg_air_temp_solar_rain.json"
 resp = requests.get(url)
@@ -260,3 +261,23 @@ data = {
 # Save to file
 with open("./data/index.json", "w") as f:
     json.dump(data, f, indent=2)
+
+# Convert to DataFrame row
+row = {
+    "date": today,
+    "Index": data.get("Index"),
+    "temp": data.get("temp"),
+    "rain": data.get("rain"),
+    "Solar_rad": data.get("Solar_rad")
+}
+
+csv_path = "data/history.csv"
+
+# Append or create
+if os.path.exists(csv_path):
+    df = pd.read_csv(csv_path)
+    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+else:
+    df = pd.DataFrame([row])
+
+df.to_csv(csv_path, index=False)
