@@ -1,8 +1,8 @@
 {
   "Index": "None",
-  "date": "2025-11-24",
-  "temp_today": 82.24124908447266,
-  "temp_next3days": 83.07846069335938,
-  "rain_last3days": 1.58,
-  "Solar_rad_next3days": 18.348175048828125
+  "date": "2025-11-25",
+  "temp_today": 83.07846069335938,
+  "temp_next3days": NaN,
+  "rain_last3days": 1.64,
+  "Solar_rad_next3days": NaN
 }
