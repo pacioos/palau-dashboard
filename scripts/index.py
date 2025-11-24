@@ -264,9 +264,10 @@ with open("./data/index.json", "w") as f:
 
 # Convert to DataFrame row
 row = {
-    "date": data.get("today_str"),
+    "date": data.get("date"),
     "Index": data.get("Index"),
     "temp_today": data.get("temp_today"),
+    "solar_today": data.get("solar_today"),
     "rain_last3days": data.get("rain_last3days"),
     "Solar_rad_next3days": data.get("Solar_rad_next3days")
 }
