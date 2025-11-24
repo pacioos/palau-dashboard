@@ -264,11 +264,11 @@ with open("./data/index.json", "w") as f:
 
 # Convert to DataFrame row
 row = {
-    "date": today,
+    "date": data.get("today_str"),
     "Index": data.get("Index"),
-    "temp": data.get("temp"),
-    "rain": data.get("rain"),
-    "Solar_rad": data.get("Solar_rad")
+    "temp_today": data.get("temp_today"),
+    "rain_last3days": data.get("rain_last3days"),
+    "Solar_rad_next3days": data.get("Solar_rad_next3days")
 }
 
 csv_path = "data/history.csv"
@@ -281,3 +281,8 @@ else:
     df = pd.DataFrame([row])
 
 df.to_csv(csv_path, index=False)
+
+try:
+    os.remove(grib_path)
+except FileNotFoundError:
+    pass
