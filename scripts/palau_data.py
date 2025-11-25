@@ -223,7 +223,7 @@ df.loc["TMean", "OutlookDate"] = tmean_outlook_date.strftime("%B %Y")
 cycle="12" 
 grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/wnd10m.01.{today_str}{cycle}.daily.grb2" 
 idx_url = grib_url + ".idx" 
-grib_file = "../data/wnd10m.cfs.daily.grb2" 
+grib_file = "./data_files/wnd10m.cfs.daily.grb2" 
 idx_file = grib_file + ".idx" 
 
 download_file(grib_url, grib_file) 
