@@ -274,7 +274,8 @@ row = {
     "temp_today": data.get("temp_today"),
     "solar_today": data.get("solar_today"),
     "rain_last3days": data.get("rain_last3days"),
-    "Solar_rad_next3days": data.get("Solar_rad_next3days")
+    "temp_next3days": data.get("temp_next3days"),
+    "solar_rad_next3days": data.get("Solar_rad_next3days")
 }
 
 csv_path = "data/history.csv"
