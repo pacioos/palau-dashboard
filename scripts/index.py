@@ -19,11 +19,12 @@ station = "PW74561"
 
 total_rain_in_last3 = sum(d["rain_in"] for d in data if d["station_no"] == station)
 
-today_utc = pd.Timestamp.utcnow()
-today_utc_str = today_utc.strftime("%Y-%m-%d")
+today = pd.Timestamp.now(tz=ZoneInfo("HST"))
+today_utc = today.strftime("%Y-%m-%d")
 date_str = f"{today_utc}/{today_utc}"
 
 dataset = "cams-global-atmospheric-composition-forecasts"
+
 request = {
     "variable": [
         "2m_temperature",
