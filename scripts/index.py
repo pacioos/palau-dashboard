@@ -257,6 +257,7 @@ data = {
     "Index": index,
     "date": today_str,
     "temp_today": today_t,
+    "solar_today": today_solar,
     "temp_next3days": next_3_t_max,
     "rain_last3days": total_rain_in_last3,
     "Solar_rad_next3days": next_3_solar_max
