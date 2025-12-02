@@ -282,7 +282,7 @@ csv_path = "data/history.csv"
 
 # Append or create
 if os.path.exists(csv_path):
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(csv_path, dtype={"Index": "string"})
     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
 else:
     df = pd.DataFrame([row])
