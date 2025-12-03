@@ -94,7 +94,6 @@ print("Last time:", last_time)
 
 last_month_ds = ds.sel(T=last_time)
 
-# Extract value for last month at the nearest grid cell to your point
 rf_last = point.sel(T=last_time)["aprod"].values.item()
 rf_last_in = rf_last / 25.4
 month = last_time.strftime("%B %Y")
@@ -103,25 +102,40 @@ df.loc["Rain", "LastMonth"] = float(rf_last_in)
 df.loc["Rain", "LastMonthDate"] = month
 
 #Rain forecast
-url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{yest_str}.wkly.anom.nc'
-filename = "./data_files/rf.forecast.nc"
+for i in range(1, 5 + 1):
+    date_str = (now_hst - timedelta(days=i)).strftime("%Y%m%d")
+    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{date_str}.wkly.anom.nc"
+    filename = "../data/rf.forecast.nc"
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        downloaded = True
+        used_date = date_str
+        break
 
-response = requests.get(url)
-if response.status_code == 200:
-    with open(filename, 'wb') as f:
-        f.write(response.content)
+if not downloaded:
+    df.loc["Rain", "Forecast"] = 'N/A'
+    df.loc["Rain", "ForecastDate"] = 'N/A'
 else:
-    print(f"Failed to download file. Status code: {response.status_code}")
-    
-rf_forecast_dataset = xr.open_dataset(filename)
-rf_forecast_palau = rf_forecast_dataset['anom'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
-rf_forecast_palau_df = rf_forecast_palau.to_dataframe().reset_index()
-rf_forecast_value = rf_forecast_palau_df['anom'].iloc[1]
-rf_forecast_value_in = rf_forecast_value/25.4
-rf_forecast_date = rf_forecast_palau_df['time'].iloc[1]
+    ds = xr.open_dataset(filename)
 
-df.loc["Rain", "Forecast"] = rf_forecast_value_in
-df.loc["Rain", "ForecastDate"] = rf_forecast_date.strftime("%B %d, %Y")
+    rf_palau = ds["anom"].sel(
+        lat=slice(min_lat_ssh, max_lat_ssh),
+        lon=slice(min_lon_ssh, max_lon_ssh)
+    )
+
+    df_p = rf_palau.to_dataframe().reset_index()
+
+    rf_val = df_p["anom"].iloc[2]
+    rf_val_in = rf_val / 25.4
+
+    rf_time = df_p["time"].iloc[2]
+
+    df.loc["Rain", "Forecast"] = rf_val_in
+    df.loc["Rain", "ForecastDate"] = rf_time.strftime("%B %d, %Y")
+
+    print(f"Downloaded CFSv2 file from {used_date}")
 
 #Rain outlook
 url = "https://access-s.clide.cloud/files/global/monthly/data/rain.forecast.anom.monthly.nc"
@@ -177,26 +191,33 @@ df.loc["TMean", "LastMonth"] = float(tanom_last_f)
 df.loc["TMean", "LastMonthDate"] = month_str
 
 #Temp forecast
-url = f'https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{yest_str}.wkly.anom.nc'
-filename = "./data_files/tmean.forecast.nc"
+for i in range(1, 5 + 1):
+    date_str = (now_hst - timedelta(days=i)).strftime("%Y%m%d")
+    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{date_str}.wkly.anom.nc"
+    filename = "../data/tmean.forecast.nc"
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        downloaded = True
+        used_date = date_str
+        break
 
-response = requests.get(url)
-if response.status_code == 200:
-    with open(filename, 'wb') as f:
-        f.write(response.content)
+if not downloaded:
+    df.loc["TMean", "Forecast"] = 'N/A'
+    df.loc["TMean", "ForecastDate"] = 'N/A'
 else:
-    print(f"Failed to download file. Status code: {response.status_code}")
-    
-tmean_forecast_dataset = xr.open_dataset(filename)
+    tmean_forecast_dataset = xr.open_dataset(filename)
 
-tmean_forecast_dataset_palau = tmean_forecast_dataset['anom'].sel(lat=lat, lon=lon, method='nearest')
-tmean_forecast_palau_df = tmean_forecast_dataset_palau.to_dataframe().reset_index()
+    tmean_forecast_dataset_palau = tmean_forecast_dataset['anom'].sel(lat=lat, lon=lon, method='nearest')
+    tmean_forecast_palau_df = tmean_forecast_dataset_palau.to_dataframe().reset_index()
 
-tmean_forecast_value_c = tmean_forecast_palau_df['anom'].iloc[1]
-tmean_forecast_value_f = tmean_forecast_value_c * 9/5
-tmean_forecast_date = tmean_forecast_palau_df['time'].iloc[1]
-df.loc["TMean", "Forecast"] = tmean_forecast_value_f
-df.loc["TMean", "ForecastDate"] = tmean_forecast_date.strftime("%B %d, %Y")
+    tmean_forecast_value_c = tmean_forecast_palau_df['anom'].iloc[2]
+    tmean_forecast_value_f = tmean_forecast_value_c * 9/5
+    tmean_forecast_date = tmean_forecast_palau_df['time'].iloc[2]
+
+    df.loc["TMean", "Forecast"] = tmean_forecast_value_f
+    df.loc["TMean", "ForecastDate"] = tmean_forecast_date.strftime("%B %d, %Y")
 
 #Tmean outlook
 url = "https://www.cpc.ncep.noaa.gov/products/CFSv2/dataInd1/glbSSTMon.nc"

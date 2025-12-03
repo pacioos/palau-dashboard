@@ -249,7 +249,7 @@ if today_t > 87 and today_solar > 20:
     elif total_rain_in_last3 > 0.5:
         index = "WET/HOT"
 else:
-    index = "None"
+    index = "No Warning"
 
 import json
 
