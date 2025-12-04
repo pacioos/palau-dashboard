@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import os
 import calendar
-from netCDF4 import num2date
 import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -53,15 +52,17 @@ columns = [
 ]
 
 df = pd.DataFrame(columns=columns)
-HST = ZoneInfo("Pacific/Honolulu")
 
-now_hst = datetime.now(HST)
-today_str = now_hst.strftime("%Y%m%d")
-yest_str  = (now_hst - timedelta(days=1)).strftime("%Y%m%d")
+UTC = ZoneInfo("UTC")
 
-# --- Last month/year (robust across year boundaries) ---
+now_utc = datetime.now(UTC)
+today_str = now_utc.strftime("%Y%m%d")
+
+next_month = now_utc + relativedelta(months=1)
+next_month_str = next_month.strftime("%Y%m")
+
 prev_month_dt = (
-    now_hst.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    now_utc.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     - timedelta(days=1)
 )
 
@@ -102,8 +103,9 @@ df.loc["Rain", "LastMonth"] = float(rf_last_in)
 df.loc["Rain", "LastMonthDate"] = month
 
 #Rain forecast
+downloaded = False
 for i in range(1, 5 + 1):
-    date_str = (now_hst - timedelta(days=i)).strftime("%Y%m%d")
+    date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
     url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{date_str}.wkly.anom.nc"
     filename = "./data/rf.forecast.nc"
     response = requests.get(url)
@@ -118,6 +120,7 @@ if not downloaded:
     df.loc["Rain", "Forecast"] = 'N/A'
     df.loc["Rain", "ForecastDate"] = 'N/A'
 else:
+    # Load successful dataset
     ds = xr.open_dataset(filename)
 
     rf_palau = ds["anom"].sel(
@@ -127,10 +130,10 @@ else:
 
     df_p = rf_palau.to_dataframe().reset_index()
 
-    rf_val = df_p["anom"].iloc[2]
+    rf_val = df_p["anom"].iloc[1]
     rf_val_in = rf_val / 25.4
 
-    rf_time = df_p["time"].iloc[2]
+    rf_time = df_p["time"].iloc[1]
 
     df.loc["Rain", "Forecast"] = rf_val_in
     df.loc["Rain", "ForecastDate"] = rf_time.strftime("%B %d, %Y")
@@ -138,26 +141,36 @@ else:
     print(f"Downloaded CFSv2 file from {used_date}")
 
 #Rain outlook
-url = "https://access-s.clide.cloud/files/global/monthly/data/rain.forecast.anom.monthly.nc"
-filename = "./data_files/rf.outlook.nc"
+downloaded = False
+filename = "./data/rf.outlook.nc"
 
-response = requests.get(url)
-if response.status_code == 200:
-    with open(filename, 'wb') as f:
-        f.write(response.content)
+for i in range(1, 5 + 1):
+    date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
+    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/monthly/data/CFSv2.Prec.{date_str}.{next_month_str}.nc"
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        downloaded = True
+        used_date = date_str
+        break
+
+if not downloaded:
+    df.loc["Rain", "Outlook"] = 'N/A'
+    df.loc["Rain", "OutlookDate"] = 'N/A'
 else:
-    print(f"Failed to download file. Status code: {response.status_code}")
+    rf_outlook_dataset = xr.open_dataset(filename)
+    rf_outlook_palau = rf_outlook_dataset['anom'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
 
-rf_outlook_dataset = xr.open_dataset(filename)
-rf_outlook_palau = rf_outlook_dataset['rain'].sel(lat=slice(min_lat_ssh,max_lat_ssh),lon=slice(min_lon_ssh,max_lon_ssh))
+    rf_outlook_palau_df = rf_outlook_palau.to_dataframe().reset_index()
+    rf_outlook_value = rf_outlook_palau_df['anom'].iloc[0]
+    rf_outlook_value_in = rf_outlook_value/25.4
+    rf_outlook_time = rf_outlook_palau_df['time'].iloc[0]
 
-rf_outlook_palau_df = rf_outlook_palau.to_dataframe().reset_index()
-rf_outlook_value = rf_outlook_palau_df['rain'].iloc[0]
-rf_outlook_value_in = rf_outlook_value/25.4
-rf_outlook_time = rf_outlook_palau_df['time'].iloc[0]
+    df.loc["Rain", "Outlook"] = rf_outlook_value_in
+    df.loc["Rain", "OutlookDate"] = rf_outlook_time.strftime("%B %Y")
 
-df.loc["Rain", "Outlook"] = rf_outlook_value_in
-df.loc["Rain", "OutlookDate"] = rf_outlook_time.strftime("%B %Y")
+    print(f"Downloaded CFSv2 file from {used_date}")
 
 #Temp last month
 url = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.CAMS/.anomaly/.temp_9120/dods"
@@ -191,8 +204,9 @@ df.loc["TMean", "LastMonth"] = float(tanom_last_f)
 df.loc["TMean", "LastMonthDate"] = month_str
 
 #Temp forecast
+downloaded = False
 for i in range(1, 5 + 1):
-    date_str = (now_hst - timedelta(days=i)).strftime("%Y%m%d")
+    date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
     url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{date_str}.wkly.anom.nc"
     filename = "./data/tmean.forecast.nc"
     response = requests.get(url)
@@ -219,28 +233,39 @@ else:
     df.loc["TMean", "Forecast"] = tmean_forecast_value_f
     df.loc["TMean", "ForecastDate"] = tmean_forecast_date.strftime("%B %d, %Y")
 
+
 #Tmean outlook
-url = "https://www.cpc.ncep.noaa.gov/products/CFSv2/dataInd1/glbSSTMon.nc"
-filename = "./data_files/tmean.outlook.nc"
+downloaded = False
+filename = "./data/tmean.outlook.nc"
 
-response = requests.get(url)
-if response.status_code == 200:
-    with open(filename, 'wb') as f:
-        f.write(response.content)
+for i in range(1, 5 + 1):
+    date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
+    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/monthly/data/CFSv2.T2m.{date_str}.{next_month_str}.nc"
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        downloaded = True
+        used_date = date_str
+        break
+
+if not downloaded:
+    df.loc["TMean", "Outlook"] = 'N/A'
+    df.loc["TMean", "OutlookDate"] = 'N/A'
 else:
-    print(f"Failed to download file. Status code: {response.status_code}")
+    tmean_outlook_dataset = xr.open_dataset(filename)
 
-tmean_outlook_dataset = xr.open_dataset(filename)
+    tmean_outlook_dataset_palau = tmean_outlook_dataset['anom'].sel(lat=lat, lon=lon, method='nearest')
+    tmean_outlook_palau_df = tmean_outlook_dataset_palau.to_dataframe().reset_index()
 
-tmean_outlook_dataset_palau = tmean_outlook_dataset['anom'].sel(lat=lat, lon=lon, method='nearest')
-tmean_outlook_palau_df = tmean_outlook_dataset_palau.to_dataframe().reset_index()
-tmean_outlook_value_c = tmean_outlook_palau_df['anom'].iloc[0]
-tmean_outlook_value_f = tmean_outlook_value_c * 9/5
-tmean_outlook_date = tmean_outlook_palau_df['time'].iloc[0]
+    tmean_outlook_value_c = tmean_outlook_palau_df['anom'].iloc[0]
+    tmean_outlook_value_f = tmean_outlook_value_c * 9/5
+    tmean_outlook_date = tmean_outlook_palau_df['time'].iloc[0]
 
-df.loc["TMean", "Outlook"] = tmean_outlook_value_f
-df.loc["TMean", "OutlookDate"] = tmean_outlook_date.strftime("%B %Y")
+    df.loc["TMean", "Outlook"] = tmean_outlook_value_f
+    df.loc["TMean", "OutlookDate"] = tmean_outlook_date.strftime("%B %Y")
 
+#Wind
 cycle="12" 
 grib_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/cfs/prod/cfs.{today_str}/{cycle}/time_grib_01/wnd10m.01.{today_str}{cycle}.daily.grb2" 
 idx_url = grib_url + ".idx" 
