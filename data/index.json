@@ -1,9 +1,9 @@
 {
-  "Index": "None",
-  "date": "2025-12-04",
-  "temp_today": 83.78202819824219,
-  "solar_today": 16.250703811645508,
-  "temp_next3days": 83.32147979736328,
-  "rain_last3days": 1.9999999999999998,
-  "Solar_rad_next3days": 20.10740852355957
+  "Index": "No Warning",
+  "date": "2025-12-05",
+  "temp_today": 82.85214233398438,
+  "solar_today": 18.259092330932617,
+  "temp_next3days": 83.68578338623047,
+  "rain_last3days": 2.36,
+  "Solar_rad_next3days": 20.765871047973633
 }
