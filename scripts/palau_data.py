@@ -105,7 +105,7 @@ df.loc["Rain", "LastMonthDate"] = month
 for i in range(1, 5 + 1):
     date_str = (now_hst - timedelta(days=i)).strftime("%Y%m%d")
     url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{date_str}.wkly.anom.nc"
-    filename = "../data/rf.forecast.nc"
+    filename = "./data/rf.forecast.nc"
     response = requests.get(url)
     if response.status_code == 200:
         with open(filename, "wb") as f:
@@ -194,7 +194,7 @@ df.loc["TMean", "LastMonthDate"] = month_str
 for i in range(1, 5 + 1):
     date_str = (now_hst - timedelta(days=i)).strftime("%Y%m%d")
     url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{date_str}.wkly.anom.nc"
-    filename = "../data/tmean.forecast.nc"
+    filename = "./data/tmean.forecast.nc"
     response = requests.get(url)
     if response.status_code == 200:
         with open(filename, "wb") as f:
