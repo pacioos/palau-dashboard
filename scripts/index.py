@@ -228,8 +228,6 @@ daily_precip_mm = tp_series.resample("D").sum()
     
 today_precip_mm = float(daily_precip_mm.get(today_str, np.nan))
     
-
-
     
 next_3_solar_values = [
     float(daily_solar.get(day, np.nan)) for day in next_3_str

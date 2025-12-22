@@ -106,7 +106,7 @@ df.loc["Rain", "LastMonthDate"] = month
 downloaded = False
 for i in range(1, 5 + 1):
     date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
-    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.prec.{date_str}.wkly.anom.nc"
+    url = f"https://www.cpc.ncep.noaa.gov/products/CFSv2/weekly/data/CFSv2.prec.{date_str}.wkly.anom.nc"
     filename = "./data/rf.forecast.nc"
     response = requests.get(url)
     if response.status_code == 200:
@@ -146,7 +146,7 @@ filename = "./data/rf.outlook.nc"
 
 for i in range(1, 5 + 1):
     date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
-    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/monthly/data/CFSv2.Prec.{date_str}.{next_month_str}.nc"
+    url = f"https://www.cpc.ncep.noaa.gov/products/CFSv2/monthly/data/CFSv2.Prec.{date_str}.{next_month_str}.nc"
     response = requests.get(url)
     if response.status_code == 200:
         with open(filename, "wb") as f:
@@ -207,7 +207,7 @@ df.loc["TMean", "LastMonthDate"] = month_str
 downloaded = False
 for i in range(1, 5 + 1):
     date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
-    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/weekly/data/CFSv2.tmpsfc.{date_str}.wkly.anom.nc"
+    url = f"https://www.cpc.ncep.noaa.gov/products/CFSv2/weekly/data/CFSv2.tmpsfc.{date_str}.wkly.anom.nc"
     filename = "./data/tmean.forecast.nc"
     response = requests.get(url)
     if response.status_code == 200:
@@ -240,7 +240,7 @@ filename = "./data/tmean.outlook.nc"
 
 for i in range(1, 5 + 1):
     date_str = (now_utc - timedelta(days=i)).strftime("%Y%m%d")
-    url = f"https://www.cpc.ncep.noaa.gov/products/people/mchen/CFSv2FCST/monthly/data/CFSv2.T2m.{date_str}.{next_month_str}.nc"
+    url = f"https://www.cpc.ncep.noaa.gov/products/CFSv2/monthly/data/CFSv2.T2m.{date_str}.{next_month_str}.nc"
     response = requests.get(url)
     if response.status_code == 200:
         with open(filename, "wb") as f:
