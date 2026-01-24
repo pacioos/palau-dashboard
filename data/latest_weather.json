@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "station_no": "PW7134",
+    "station_name": "Ngeremlengui AWS",
+    "date": "2026-01-24",
+    "avg_air_temp": 27.8,
+    "rain_mm": 0.5,
+    "rain_in": 0.02
+  },
+  {
+    "station_no": "PW74021",
+    "station_name": "Peleliu AWS",
+    "date": "2026-01-24",
+    "avg_air_temp": 29.5,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
+  },
+  {
+    "station_no": "PW74351",
+    "station_name": "Airai AWS",
+    "date": "2026-01-24",
+    "avg_air_temp": 28.5,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
+  },
+  {
+    "station_no": "PW74450",
+    "station_name": "Aimeliik AWS",
+    "date": "2026-01-24",
+    "avg_air_temp": 28.15,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
+  },
+  {
+    "station_no": "PW74561",
+    "station_name": "Melekeok AWS",
+    "date": "2026-01-24",
+    "avg_air_temp": 25.9,
+    "rain_mm": 0.5,
+    "rain_in": 0.02
+  }
+]
