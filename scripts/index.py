@@ -6,7 +6,7 @@ from collections import defaultdict
 from zoneinfo import ZoneInfo
 import pandas as pd
 import numpy as np
-import os
+import os 
 
 url = "https://kukau.org/avg_air_temp_solar_rain.json"
 resp = requests.get(url)
@@ -15,20 +15,19 @@ stations = defaultdict(list)
 for row in data:
     stations[row["station_no"]].append(row)
 
+today = pd.Timestamp.now(tz=ZoneInfo("UTC"))
+today_utc = today.strftime("%Y-%m-%d")
+date_str = f"{today_utc}/{today_utc}"
+
 station = "PW74561"
 
 total_rain_in_last3 = sum(d["rain_in"] for d in data if d["station_no"] == station)
 
-today = pd.Timestamp.now(tz=ZoneInfo("HST"))
-today_utc = today.strftime("%Y-%m-%d")
-date_str = f"{today_utc}/{today_utc}"
 
 dataset = "cams-global-atmospheric-composition-forecasts"
-
 request = {
     "variable": [
         "2m_temperature",
-        "surface_solar_radiation_downwards",
         "total_precipitation"
     ],
     "date": [date_str],
@@ -155,7 +154,6 @@ client = cdsapi.Client()
 result = client.retrieve(dataset, request)
 grib_path = result.download()  
 
-
 ds = xr.open_dataset(grib_path, engine="cfgrib")
 ds = ds.assign_coords(valid_time = ds.time + ds.step)
 
@@ -202,20 +200,8 @@ def accumulated_to_incremental(data_arr):
         name=data_arr.name + "_inc"
     )
         
-
-ssrd_acc = palau["ssrd"]
-ssrd_inc = accumulated_to_incremental(ssrd_acc)
-    
-ssrd_MJ = ssrd_inc / 1e6
-ssrd_MJ = ssrd_MJ.assign_coords(valid_time=("step", valid_local))
-ssrd_MJ = ssrd_MJ.swap_dims({"step": "valid_time"})
-    
-ssrd_series = ssrd_MJ.to_pandas()
-daily_solar = ssrd_series.resample("D").sum()
-    
-today_solar = float(daily_solar.get(today_str, np.nan))
-        
-
+ 
+#Precip
 tp_acc = palau["tp"]                 # m accumulated
 tp_inc = accumulated_to_incremental(tp_acc)
     
@@ -228,59 +214,62 @@ daily_precip_mm = tp_series.resample("D").sum()
     
 today_precip_mm = float(daily_precip_mm.get(today_str, np.nan))
     
-    
-next_3_solar_values = [
-    float(daily_solar.get(day, np.nan)) for day in next_3_str
-]
 next_3_precip_values = [
     float(daily_precip_mm.get(day, np.nan)) for day in next_3_str
 ]
     
-next_3_solar_max = float(np.nanmax(next_3_solar_values))
 next_3_precip_sum = float(np.nansum(next_3_precip_values))
 
-if today_t > 87 and today_solar > 20:
-    if  next_3_t_max > 87 and next_3_solar_max > 20:
-        index = "HOT/HOT"
-    elif next_3_precip_sum > 1.5:
-        index = "HOT/WET"
-    elif total_rain_in_last3 > 0.5:
-        index = "WET/HOT"
+if today_t > 87:
+    recent_index = "HOT"
+elif total_rain_in_last3 > 0.5:
+    recent_index = "WET"
 else:
-    index = "No Warning"
+    recent_index = "None"
+    
+if next_3_t_max > 87:
+    forecast_index = "HOT"
+elif next_3_precip_sum > 1.5:
+    forecast_index = "WET"
+else:
+    forecast_index = "None"
 
-import json
+
+if recent_index == "WET" and forecast_index == "WET":
+    index = "None"
+elif recent_index == "None" or forecast_index == "None":
+    index = "None"
+else:
+    index = "Warning"
+
 
 data = {
-    "Index": index,
     "date": today_str,
-    "temp_today": today_t,
-    "solar_today": today_solar,
-    "temp_next3days": next_3_t_max,
-    "rain_last3days": total_rain_in_last3,
-    "Solar_rad_next3days": next_3_solar_max
+    "forecast_index": forecast_index,
+    "recent_index": recent_index,
+    "total_index": index
 }
 
 # Save to file
-with open("./data/index.json", "w") as f:
+with open("index.json", "w") as f:
     json.dump(data, f, indent=2)
 
 # Convert to DataFrame row
 row = {
     "date": data.get("date"),
-    "Index": data.get("Index"),
-    "temp_today": data.get("temp_today"),
-    "solar_today": data.get("solar_today"),
-    "rain_last3days": data.get("rain_last3days"),
-    "temp_next3days": data.get("temp_next3days"),
-    "solar_rad_next3days": data.get("Solar_rad_next3days")
+    "forecast_index": forecast_index,
+    "recent_index": recent_index,
+    "total_index": index,
+    "temp_recent": today_t,
+    "rain_recent": today_precip_mm,
+    "temp_forecast": next_3_t_max,
+    "rain_forecast": next_3_precip_sum,
 }
 
-csv_path = "data/history.csv"
+csv_path = "history.csv"
 
-# Append or create
 if os.path.exists(csv_path):
-    df = pd.read_csv(csv_path, dtype={"Index": "string"})
+    df = pd.read_csv(csv_path)
     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
 else:
     df = pd.DataFrame([row])
