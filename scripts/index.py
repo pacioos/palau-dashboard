@@ -250,8 +250,7 @@ else:
 data = {
     "date": today_str,
     "forecast_index": forecast_index,
-    "recent_index": recent_index,
-    "total_index": index
+    "recent_index": recent_index
 }
 
 # Save to file
