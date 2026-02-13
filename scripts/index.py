@@ -224,6 +224,8 @@ if today_t > 87:
     recent_index = "HOT"
 elif total_rain_in_last3 > 0.5:
     recent_index = "WET"
+elif today_t > 87 and total_rain_in_last3 > 0.5:
+    recent_index = "HOT/WET"
 else:
     recent_index = "None"
     
@@ -231,16 +233,18 @@ if next_3_t_max > 87:
     forecast_index = "HOT"
 elif next_3_precip_sum > 1.5:
     forecast_index = "WET"
+elif next_3_t_max > 87 and next_3_precip_sum > 1.5:
+    forecast_index = "HOT/WET"
 else:
     forecast_index = "None"
 
 
-if recent_index == "WET" and forecast_index == "WET":
-    index = "None"
-elif recent_index == "None" or forecast_index == "None":
-    index = "None"
-else:
-    index = "Warning"
+# if recent_index == "WET" and forecast_index == "WET":
+#     index = "None"
+# elif recent_index == "None" or forecast_index == "None":
+#     index = "None"
+# else:
+#     index = "Warning"
 
 
 data = {
@@ -259,7 +263,6 @@ row = {
     "date": data.get("date"),
     "forecast_index": forecast_index,
     "recent_index": recent_index,
-    "total_index": index,
     "temp_recent": today_t,
     "rain_recent": today_precip_mm,
     "temp_forecast": next_3_t_max,
