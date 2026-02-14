@@ -256,7 +256,7 @@ data = {
 # Save to file
 with open("index.json", "w") as f:
     json.dump(data, f, indent=2)
-
+print(data)
 # Convert to DataFrame row
 row = {
     "date": data.get("date"),
@@ -275,7 +275,7 @@ if os.path.exists(csv_path):
     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
 else:
     df = pd.DataFrame([row])
-
+print(df)
 df.to_csv(csv_path, index=False)
 
 try:
