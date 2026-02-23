@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 import os 
 
+print(os.getcwd())
+
 url = "https://kukau.org/avg_air_temp_solar_rain.json"
 resp = requests.get(url)
 data = resp.json()
@@ -254,10 +256,10 @@ data = {
 }
 
 # Save to file
-with open("index.json", "w") as f:
+with open("data/index.json", "w") as f:
     json.dump(data, f, indent=2)
-print(data)
-# Convert to DataFrame row
+print("Saved to data.json")
+
 row = {
     "date": data.get("date"),
     "forecast_index": forecast_index,
@@ -268,7 +270,7 @@ row = {
     "rain_forecast": next_3_precip_sum,
 }
 
-csv_path = "history.csv"
+csv_path = "data/history.csv"
 
 if os.path.exists(csv_path):
     df = pd.read_csv(csv_path)
