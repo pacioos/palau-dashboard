@@ -1,9 +1,5 @@
 {
-  "Index": "No Warning",
-  "date": "2026-02-06",
-  "temp_today": 82.25531005859375,
-  "solar_today": 16.206092834472656,
-  "temp_next3days": 83.0130386352539,
-  "rain_last3days": 1.9,
-  "Solar_rad_next3days": 22.41551971435547
+  "date": "2026-02-24",
+  "forecast_index": "WET",
+  "recent_index": "None"
 }

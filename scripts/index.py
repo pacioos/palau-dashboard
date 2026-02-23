@@ -11,7 +11,9 @@ import os
 print(os.getcwd())
 
 url = "https://kukau.org/avg_air_temp_solar_rain.json"
-resp = requests.get(url)
+resp = requests.get(url, timeout=(10, 30), headers={"User-Agent": "palau-dashboard/1.0"})
+resp.raise_for_status()
+
 data = resp.json()
 stations = defaultdict(list)
 for row in data:
