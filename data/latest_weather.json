@@ -2,41 +2,41 @@
   {
     "station_no": "PW7134",
     "station_name": "Ngeremlengui AWS",
-    "date": "2026-04-26",
-    "avg_air_temp": 28.5,
-    "rain_mm": 4.0,
-    "rain_in": 0.16
+    "date": "2026-04-27",
+    "avg_air_temp": 28.2,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
   },
   {
     "station_no": "PW74021",
     "station_name": "Peleliu AWS",
-    "date": "2026-04-26",
-    "avg_air_temp": 27.8,
+    "date": "2026-04-27",
+    "avg_air_temp": 21.15,
     "rain_mm": 0.0,
     "rain_in": 0.0
   },
   {
     "station_no": "PW74351",
     "station_name": "Airai AWS",
-    "date": "2026-04-26",
-    "avg_air_temp": 29.7,
-    "rain_mm": 0.5,
-    "rain_in": 0.02
+    "date": "2026-04-27",
+    "avg_air_temp": 29.6,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
   },
   {
     "station_no": "PW74450",
     "station_name": "Aimeliik AWS",
-    "date": "2026-04-26",
-    "avg_air_temp": 34.95,
-    "rain_mm": 0.5,
-    "rain_in": 0.02
+    "date": "2026-04-27",
+    "avg_air_temp": 34.55,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
   },
   {
     "station_no": "PW74561",
     "station_name": "Melekeok AWS",
-    "date": "2026-04-26",
-    "avg_air_temp": 28.7,
-    "rain_mm": 4.0,
-    "rain_in": 0.16
+    "date": "2026-04-27",
+    "avg_air_temp": 28.8,
+    "rain_mm": 0.0,
+    "rain_in": 0.0
   }
 ]
