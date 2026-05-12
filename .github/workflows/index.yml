@@ -1,53 +1,53 @@
-name: Index Processing
+# name: Index Processing
 
-on:
-  schedule:
-    - cron: '0 22 * * *' 
-  workflow_dispatch: 
+# on:
+#   schedule:
+#     - cron: '0 22 * * *' 
+#   workflow_dispatch: 
 
-permissions:
-  contents: write
+# permissions:
+#   contents: write
 
-jobs:
-  fetch-data:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# jobs:
+#   fetch-data:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          pip install numpy requests xarray pandas netCDF4 cfgrib cdsapi>=0.7.7
+#       - name: Install dependencies
+#         run: |
+#           pip install numpy requests xarray pandas netCDF4 cfgrib cdsapi>=0.7.7
 
-      - name: Set up CDS API credentials
-        run: |
-          mkdir -p $HOME
-          echo "url: ${{ secrets.CDSAPI_URL }}" > $HOME/.cdsapirc
-          echo "key: ${{ secrets.CDSAPI_KEY }}" >> $HOME/.cdsapirc
+#       - name: Set up CDS API credentials
+#         run: |
+#           mkdir -p $HOME
+#           echo "url: ${{ secrets.CDSAPI_URL }}" > $HOME/.cdsapirc
+#           echo "key: ${{ secrets.CDSAPI_KEY }}" >> $HOME/.cdsapirc
 
-      - name: Run data index script
-        run: python scripts/index.py
+#       - name: Run data index script
+#         run: python scripts/index.py
 
-      - name: Upload JSON output
-        uses: actions/upload-artifact@v4
-        with:
-          name: palau-json-outputs
-          path: |
-            data/*.json
+#       - name: Upload JSON output
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: palau-json-outputs
+#           path: |
+#             data/*.json
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+#       - name: Configure Git
+#         run: |
+#           git config user.name "github-actions"
+#           git config user.email "github-actions@github.com"
 
-      - name: Commit and push JSON and CSV data
-        run: |
-          git pull origin main
-          git add data/*.json data/history.csv
-          git commit -m "Daily update of Palau index data" || echo "No changes to commit"
-          git push origin main
+#       - name: Commit and push JSON and CSV data
+#         run: |
+#           git pull origin main
+#           git add data/*.json data/history.csv
+#           git commit -m "Daily update of Palau index data" || echo "No changes to commit"
+#           git push origin main
